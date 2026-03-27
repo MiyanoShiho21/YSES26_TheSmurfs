@@ -22,8 +22,8 @@ camera_state = {
 depth_history = {"CAM-001": [], "CAM-002": []}
 
 CAMERAS = [
-    {"id": "CAM-001", "name": "CCTV 1", "street": "Boni Avenue"},
-    {"id": "CAM-002", "name": "CCTV 2", "street": "Kalentong Street"},
+    {"id": "CAM-001", "name": "CCTV 1"},
+    {"id": "CAM-002", "name": "CCTV 2"},
 ]
 
 FLOOD_LEVELS = ["Dry", "Ankle Level", "Knee Level", "Waist Level", "Impassable"]
@@ -212,23 +212,22 @@ header { background:rgba(10,15,26,0.95); border-bottom:1px solid var(--border2);
 .stat-value { font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:500; color:var(--text); line-height:1.2; }
 .ok{color:var(--dry)} .warn{color:var(--ankle)} .danger{color:var(--waist)}
 
-.main { display:grid; grid-template-columns:220px 1fr; height:calc(100vh - 52px - 48px); position:relative; z-index:1; overflow:hidden; }
+.main { display:grid; grid-template-columns:200px 1fr; height:calc(100vh - 52px - 48px); position:relative; z-index:1; overflow:hidden; }
 
 .panel-left { border-right:1px solid var(--border); background:var(--bg2); display:flex; flex-direction:column; }
 .panel-header { padding:12px 16px; border-bottom:1px solid var(--border); font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); font-weight:600; }
 
 .camera-node { padding:14px 16px; border-bottom:1px solid var(--border); }
 .camera-node.active { background:var(--surface); border-left:3px solid var(--accent); }
-.camera-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
-.camera-name { font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700; letter-spacing:0.5px; }
+.camera-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.camera-name { font-family:'Barlow Condensed',sans-serif; font-size:17px; font-weight:700; letter-spacing:0.5px; }
 .flood-badge { font-family:'IBM Plex Mono',monospace; font-size:10px; padding:2px 7px; border-radius:3px; letter-spacing:0.5px; text-transform:uppercase; }
 .badge-dry        { background:rgba(34,197,94,0.12);  color:var(--dry);   border:1px solid rgba(34,197,94,0.25); }
 .badge-ankle      { background:rgba(234,179,8,0.12);  color:var(--ankle); border:1px solid rgba(234,179,8,0.25); }
 .badge-knee       { background:rgba(249,115,22,0.12); color:var(--knee);  border:1px solid rgba(249,115,22,0.25); }
 .badge-waist      { background:rgba(239,68,68,0.12);  color:var(--waist); border:1px solid rgba(239,68,68,0.25); }
 .badge-impassable { background:rgba(220,38,38,0.2);   color:#ff6b6b;      border:1px solid rgba(220,38,38,0.4); }
-.camera-street { font-size:11px; color:var(--muted); margin-bottom:6px; }
-.depth-bar-wrap { height:3px; background:var(--surface2); border-radius:2px; overflow:hidden; margin-bottom:5px; }
+.depth-bar-wrap { height:3px; background:var(--surface2); border-radius:2px; overflow:hidden; margin-bottom:6px; }
 .depth-bar { height:100%; border-radius:2px; transition:width 1s ease; }
 .camera-meta { display:flex; flex-direction:column; gap:3px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--dim); }
 
@@ -268,7 +267,7 @@ header { background:rgba(10,15,26,0.95); border-bottom:1px solid var(--border2);
 
 <div class="stat-bar">
   <div class="stat-item"><div class="stat-label">Cameras Online</div><div class="stat-value ok">2 / 2</div></div>
-  <div class="stat-item"><div class="stat-label">Flooded Streets</div><div class="stat-value" id="sFlooded">0</div></div>
+  <div class="stat-item"><div class="stat-label">Flooded</div><div class="stat-value" id="sFlooded">0</div></div>
   <div class="stat-item"><div class="stat-label">Model</div><div class="stat-value" style="font-size:13px;padding-top:4px;color:var(--muted)">YOLOv8n Live</div></div>
 </div>
 
@@ -298,7 +297,7 @@ header { background:rgba(10,15,26,0.95); border-bottom:1px solid var(--border2);
       <div class="depth-readout" id="depthReadout" style="color:var(--dry)">DRY</div>
     </div>
     <div class="chart-panel">
-      <div class="chart-label">Depth History — CCTV 1 (Live Video)</div>
+      <div class="chart-label">Depth History — CCTV 1</div>
       <canvas id="chartCanvas" style="width:100%;height:72px"></canvas>
     </div>
   </div>
@@ -307,8 +306,8 @@ header { background:rgba(10,15,26,0.95); border-bottom:1px solid var(--border2);
 
 <script>
 const CAMERAS = [
-  {id:"CAM-001", name:"CCTV 1", street:"N/A"},
-  {id:"CAM-002", name:"CCTV 2", street:"M/A"},
+  {id:"CAM-001", name:"CCTV 1"},
+  {id:"CAM-002", name:"CCTV 2"},
 ];
 const LEVEL_COLORS = {Dry:"#22c55e","Ankle Level":"#eab308","Knee Level":"#f97316","Waist Level":"#ef4444",Impassable:"#dc2626"};
 const BADGE = {Dry:"badge-dry","Ankle Level":"badge-ankle","Knee Level":"badge-knee","Waist Level":"badge-waist",Impassable:"badge-impassable"};
@@ -364,7 +363,6 @@ function renderCameras(cameras) {
         <span class="camera-name">${cam.name}</span>
         <span class="flood-badge ${BADGE[level]}">${level === "Dry" ? "DRY" : level.toUpperCase()}</span>
       </div>
-      <div class="camera-street">${cam.street}</div>
       <div class="depth-bar-wrap"><div class="depth-bar" style="width:${pct}%;background:${color}"></div></div>
       <div class="camera-meta">
         <span>${depth.toFixed(1)} cm depth</span>
