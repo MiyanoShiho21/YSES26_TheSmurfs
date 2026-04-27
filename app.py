@@ -35,13 +35,17 @@ LEVEL_COLORS_BGR = {
     "Impassable": (50,  38, 220),
 }
 
-try:
-    from ultralytics import YOLO
-    model = YOLO("yolov8n.pt")
-    print("[BahaAlerto] YOLOv8 model loaded.")
-except Exception as e:
-    model = None
-    print(f"[BahaAlerto] YOLOv8 not available: {e}")
+def load_model():
+    try:
+        from ultralytics import YOLO
+        loaded_model = YOLO("yolov8n.pt")
+        print("[BahaAlerto] YOLOv8 model loaded.")
+        return loaded_model
+    except Exception as e:
+        print(f"[BahaAlerto] YOLOv8 not available: {e}")
+        return None
+        
+model = load_model()
 
 def simulate_flood(cam_id):
     seed = ord(cam_id[-1])
@@ -104,7 +108,7 @@ def update_camera_state(cam_id, flood_depth, flood_level, confidence):
     depth_history[cam_id].append(round(flood_depth, 1))
     if len(depth_history[cam_id]) > 30:
         depth_history[cam_id].pop(0)
-
+  
 def video_thread():
     global latest_frame
     cap = cv2.VideoCapture(VIDEO_PATH)
