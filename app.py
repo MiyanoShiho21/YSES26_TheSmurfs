@@ -61,6 +61,49 @@ def classify_depth(depth_cm):
     elif depth_cm >= 25: return "Knee Level"
     elif depth_cm >= 5:  return "Ankle Level"
     else:                return "Dry"
+    
+def estimate_flood_depth(results, frame):
+    boxes = results[0].boxes
+    person_detections = []
+
+    for box in boxes:
+        cls = int(box.cls[0])
+        conf_val = float(box.conf[0])
+        xyxy = box.xyxy[0].tolist()
+        h_box = xyxy[3] - xyxy[1]
+
+        if cls == 0:
+            person_detections.append({"height": h_box, "conf": conf_val})
+
+    if person_detections:
+        avg_h = sum(p["height"] for p in person_detections) / len(person_detections)
+        ratio = avg_h / frame.shape[0]
+        flood_depth = max(0, (1 - ratio) * 80 + random.gauss(0, 3))
+        confidence = max(p["conf"] for p in person_detections)
+    else:
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        brightness = gray.mean()
+        flood_depth = max(0, (1 - brightness / 255) * 60 + random.gauss(0, 5))
+        confidence = round(random.uniform(0.65, 0.88), 2)
+
+    return flood_depth, confidence
+
+def update_camera_state(cam_id, flood_depth, flood_level, confidence):
+    prev_depth = camera_state[cam_id]["depthCm"]
+    rate = round((flood_depth - prev_depth) / 0.5, 2)
+    ttc = round((50 - flood_depth) / rate, 1) if rate > 0 and flood_depth < 50 else None
+
+    camera_state[cam_id].update({
+        "floodLevel": flood_level,
+        "depthCm": round(flood_depth, 1),
+        "confidence": round(confidence, 2),
+        "rateOfRise": rate,
+        "timeToCritical": ttc,
+    })
+
+    depth_history[cam_id].append(round(flood_depth, 1))
+    if len(depth_history[cam_id]) > 30:
+        depth_history[cam_id].pop(0)
 
 def video_thread():
     global latest_frame
@@ -84,26 +127,8 @@ def video_thread():
             results = model(frame, conf=0.4, verbose=False)
             annotated = results[0].plot()
 
-            boxes = results[0].boxes
-            person_detections = []
-            for box in boxes:
-                cls = int(box.cls[0])
-                conf_val = float(box.conf[0])
-                xyxy = box.xyxy[0].tolist()
-                h_box = xyxy[3] - xyxy[1]
-                if cls == 0:
-                    person_detections.append({"height": h_box, "conf": conf_val})
-
-            if person_detections:
-                avg_h = sum(p["height"] for p in person_detections) / len(person_detections)
-                ratio = avg_h / frame.shape[0]
-                flood_depth = max(0, (1 - ratio) * 80 + random.gauss(0, 3))
-                confidence  = max(p["conf"] for p in person_detections)
-            else:
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                brightness = gray.mean()
-                flood_depth = max(0, (1 - brightness / 255) * 60 + random.gauss(0, 5))
-                confidence  = round(random.uniform(0.65, 0.88), 2)
+            # estimate_flood_depth
+            flood_depth, confidence = estimate_flood_depth(results, frame)
 
             flood_level = classify_depth(flood_depth)
             color_bgr = LEVEL_COLORS_BGR.get(flood_level, (86, 197, 34))
@@ -126,19 +151,8 @@ def video_thread():
         with frame_lock:
             latest_frame = buffer.tobytes()
 
-        prev_depth = camera_state["CAM-001"]["depthCm"]
-        rate = round((flood_depth - prev_depth) / 0.5, 2)
-        ttc  = round((50 - flood_depth) / rate, 1) if rate > 0 and flood_depth < 50 else None
-        camera_state["CAM-001"].update({
-            "floodLevel": flood_level,
-            "depthCm":    round(flood_depth, 1),
-            "confidence": round(confidence, 2),
-            "rateOfRise": rate,
-            "timeToCritical": ttc,
-        })
-        depth_history["CAM-001"].append(round(flood_depth, 1))
-        if len(depth_history["CAM-001"]) > 30:
-            depth_history["CAM-001"].pop(0)
+        # update_camera_state
+        update_camera_state("CAM-001", flood_depth, flood_level, confidence)
 
         time.sleep(1 / FRAME_RATE)
 
